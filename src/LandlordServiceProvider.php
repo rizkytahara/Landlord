@@ -4,8 +4,10 @@ namespace HipsterJazzbo\Landlord;
 
 use HipsterJazzbo\Landlord\Facades\LandlordFacade;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Foundation\Application as LaravelApplication;
 use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Lumen\Application as LumenApplication;
 
 class LandlordServiceProvider extends ServiceProvider
 {
@@ -16,9 +18,14 @@ class LandlordServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->publishes([
-            realpath(__DIR__ . '/../config/landlord.php') => config_path('landlord.php')
-        ]);
+        // setup config
+        $source = realpath(__DIR__ . '/../config/landlord.php');
+
+        if ($this->app instanceof LaravelApplication && $this->app->runningInConsole()) {
+            $this->publishes([$source => config_path('landlord.php')]);
+        } elseif ($this->app instanceof LumenApplication) {
+            $this->app->configure('landlord');
+        }
     }
 
     /**
@@ -33,10 +40,12 @@ class LandlordServiceProvider extends ServiceProvider
         });
 
         // Define alias 'Landlord'
-        $this->app->booting(function () {
-            $loader = AliasLoader::getInstance();
+        if ($this->app instanceof LaravelApplication && $this->app->runningInConsole()) {
+            $this->app->booting(function () {
+                $loader = AliasLoader::getInstance();
 
-            $loader->alias('Landlord', LandlordFacade::class);
-        });
+                $loader->alias('Landlord', LandlordFacade::class);
+            });
+        }
     }
 }
